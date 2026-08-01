@@ -1,8 +1,10 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import Title from "../components/Title";
 import { assets } from "../assets/assets";
 import NewsletterBox from "../components/NewsletterBox";
 const Contact = () => {
+  const navigate = useNavigate();
   return (
     <div>
       <div className="text-center text-2xl pt-10 border-t">
@@ -30,7 +32,10 @@ const Contact = () => {
             {" "}
             Learn more about our teams and job openings.
           </p>
-          <button className="border border-black px-8 py-4 text-sm hover:bg-black hover:text-white transition-all duration-500">
+          <button
+            onClick={() => navigate("/careers")}
+            className="border border-black px-8 py-4 text-sm hover:bg-black hover:text-white transition-all duration-500"
+          >
             Explore Jobs
           </button>
         </div>
