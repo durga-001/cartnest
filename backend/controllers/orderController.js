@@ -11,7 +11,7 @@ const deliveryCharge = 10
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 const razorpayInstance = new razorpay({
-    key_id: process.env.RAZORPAY_ID,
+    key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET
 })
 //placing order using COD method
@@ -23,6 +23,7 @@ const placeOrder = async(req,res) => {
             userId,
             items,
             amount,
+            address,
             paymentMethod: "COD",
             payment: false,
             date: Date.now()
@@ -31,7 +32,7 @@ const placeOrder = async(req,res) => {
         const newOrder = new orderModel(orderData)
         await newOrder.save()
 
-        await userModel.findBIdAndUpdate(userId,{cartData:{}})
+        await userModel.findByIdAndUpdate(userId,{cartData:{}})
         res.json({success:true, message: "Order Placed"})
     }catch(error){
         console.log(error)
@@ -49,6 +50,7 @@ const placeOrderStripe = async(req,res) => {
             userId,
             items,
             amount,
+            address,
             paymentMethod: "Stripe",
             payment: false,
             date: Date.now()
@@ -58,7 +60,7 @@ const placeOrderStripe = async(req,res) => {
         await newOrder.save()
 
         const line_items = items.map((item)=>({
-            price_Data: {
+            price_data: {
                 currency:currency,
                 product_data: {
                     name: item.name
@@ -69,7 +71,7 @@ const placeOrderStripe = async(req,res) => {
         }))
 
         line_items.push({
-             price_Data: {
+             price_data: {
                 currency:currency,
                 product_data: {
                     name: "Delivery Charges"
@@ -121,6 +123,7 @@ const placeOrderRazorpay = async(req,res) => {
             userId,
             items,
             amount,
+            address,
             paymentMethod: "Razorpay",
             payment: false,
             date: Date.now()
@@ -129,7 +132,7 @@ const placeOrderRazorpay = async(req,res) => {
         const newOrder = new orderModel(orderData)
         await newOrder.save()
 
-        const option = {
+        const options = {
             amount: amount*100,
             currency: currency.toUpperCase(),
             receipt : newOrder._id.toString()
@@ -138,8 +141,9 @@ const placeOrderRazorpay = async(req,res) => {
         await razorpayInstance.orders.create(options, (error, order) => {
             if(error){
                 console.log(error)
-                return res.json*{success:false, message: error}
+                return res.json({success:false, message: error})
             }
+            res.json({success:true, order})
         })
         
     } catch (error) {

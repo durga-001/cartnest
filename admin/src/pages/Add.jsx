@@ -36,8 +36,9 @@ const onSubmitHandler = async (e) => {
     image2 && formData.append("image2", image2)
     image3 && formData.append("image3", image3)
     image4 && formData.append("image4", image4)
+    
 
-    const response = await axios.post(backendUrl + "/api/product/add", formData, {headers:{token}})
+const response = await axios.post(backendUrl + "/api/product/add", formData, {headers:{Authorization: `Bearer ${token}`}})
 if(response.data.success){
   toast.success(response.data.message)
   setName('')
@@ -85,7 +86,7 @@ if(response.data.success){
 
     <div className='w-full'>
       <p className = 'mb-2' >Product Name</p>
-      <input onChange={(e)=>setName(e.target.value)} value = {name} className = 'w-full max-w-[500px] px-3 py-2' type="text" name="name" id="name" placeholder="Type here" required />
+      <input onChange={(e)=>setName(e.target.value)} value={name} className = 'w-full max-w-[500px] px-3 py-2' type="text" name="name" id="name" placeholder="Type here" required />
     </div>
 
     <div className='w-full'>

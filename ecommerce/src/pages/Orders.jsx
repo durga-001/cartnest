@@ -1,7 +1,9 @@
 import React , {useContext} from 'react'
 import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title'
-
+import { useState } from 'react'
+import axios from 'axios'
+import { useEffect } from 'react'
 const Orders = () => {
 
   const { backendUrl, token, currency} = useContext(ShopContext);
@@ -14,7 +16,7 @@ const Orders = () => {
         return null
       }
       const response = await axios.post(backendUrl + '/api/order/userorders', {}, {headers: {token}})
-if(response.data.succcess){
+if(response.data.success){
   let allOrdersItem = []
   response.data.orders.map((order) =>{
     order.items.map((item)=>{
@@ -28,13 +30,14 @@ if(response.data.succcess){
   setorderData(allOrdersItem.reverse())
 } 
  }catch(error){
-
+    console.log(error)
     }
   }
 
   useEffect (()=>{
     loadOrderData()
-  }, [])
+  }, [token])
+  
   return (
     <div className='border-t pt-16'>
       <div className = 'text-2xl'>
@@ -43,7 +46,7 @@ if(response.data.succcess){
 
       <div>
         {
-          products.slice(1,4).map((item, index)=>(
+          orderData.slice(1,4).map((item, index)=>(
             <div key={index} className='py-4 border-t border-gray-300 text-gray-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
               <div className = 'flex items-start gap-6 text-sm'>
                 <img className = 'w-16 sm:w-20' src={item.image[0]} alt="" />
@@ -52,7 +55,7 @@ if(response.data.succcess){
                   <div className = 'flex items-center gap-3 mt-1 text-base text-gray-700'>
                     <p>{currency}{item.price}</p>
                     <p>{item.quantity}</p>
-                    <p>Size:{item.size()}</p>
+                    <p>Size:{item.size}</p>
                   </div>
                   <p className='mt-1'>Date: <span className='text-gray-400'>{new Date(item.date).toDateString()}</span></p>
                   <p className='mt-1'>Payment: <span className='text-gray-400'>{item.paymentMethod}</span></p>

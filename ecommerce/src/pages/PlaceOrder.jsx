@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import Title from '../components/Title'
 import CartTotal from '../components/CartTotal'
 import { assets } from '../assets/assets'
+import { toast } from 'react-toastify'
 import { ShopContext } from '../context/ShopContext';
+import axios from 'axios'
 
 const PlaceOrder = () => {
   const [method, setMethod] = useState('cod');
-  const {navigate, backendUrl, token, cartItems, setCartItems, getCartAmount, delivery_fee, productsData} = useNavigate();
-
+  const navigate = useNavigate();
+const { backendUrl, token, cartItems, setCartItems, getCartAmount, delivery_fee, products } = useContext(ShopContext);
   const [formData, setFormData] = useState({
     firstName:'',
     lastName:'',
@@ -80,12 +82,12 @@ let orderData = {
 }   
 switch(method){
   case 'cod':
-    const response = await axios.post(backendUrl + 'api/order/place', orderData, {headers:{token}})
+    const response = await axios.post(backendUrl + '/api/order/place', orderData, {headers:{token}})
     console.log(response.data);
     
     if(response.data.success){
       setCartItems({})
-      navigate('./orders')
+      navigate('/orders')
     } else {
       toast.error(response.data.message)
     }
