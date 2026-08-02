@@ -1,72 +1,161 @@
-import React, {useState, useContext} from 'react'
-import { ShopContext } from '../context/ShopContext';
-import axios from 'axios'
-import {toast} from 'react-toastify'
-import { useEffect } from 'react';
+import React, { useState } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 
-const Login = () => {
-  const [currentState, setCurrentState] = useState('Login');
-  const {token, setToken, backendUrl, navigate} = useContext(ShopContext)
-  const [name, setName] = useState('')
-  const [password, setPassword] = useState('')
-  const [email,setEmail] = useState('')
+const Login = ({ setToken, setRole, setStoreName }) => {
+  const [tab, setTab] = useState("seller"); // 'seller' | 'siteAdmin'
+  const [mode, setMode] = useState("login"); // 'login' | 'register' (seller only)
 
-  const onSubmitHandler = async (event) => {
-    event.preventDefault();
+  const [storeName, setStoreNameInput] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  const resetFields = () => {
+    setStoreNameInput("");
+    setEmail("");
+    setPassword("");
+  };
+
+  const onSubmitHandler = async (e) => {
+    e.preventDefault();
     try {
-      if(currentState == 'Sign Up'){
-        const response = await axios.post(backendUrl + '/api/user/register', {name,email, password})
-        if(response.data.success){
-          setToken(response.data.token)
-          localStorage.setItem('token',response.data.token)
+      if (tab === "siteAdmin") {
+        const response = await axios.post(backendUrl + "/api/user/admin", {
+          email,
+          password,
+        });
+        if (response.data.success) {
+          setRole("siteAdmin");
+          setStoreName("");
+          setToken(response.data.token);
         } else {
-          toast.error(response.data.message)
+          toast.error(response.data.message);
         }
+        return;
       }
-      else{
-        const response = await axios.post(backendUrl + '/api/user/login', {email,password})
-        if(response.data.success){
-          setToken(response.data.token)
-          localStorage.setItem('token',response.data.token)
-        } else {
-          toast.error(response.data.message)
-        }
+
+      // seller tab
+      const endpoint =
+        mode === "login" ? "/api/seller/login" : "/api/seller/register";
+      const payload =
+        mode === "login" ? { email, password } : { storeName, email, password };
+      const response = await axios.post(backendUrl + endpoint, payload);
+
+      if (response.data.success) {
+        setRole("seller");
+        setStoreName(response.data.storeName || "");
+        setToken(response.data.token);
+      } else {
+        toast.error(response.data.message);
       }
     } catch (error) {
-      console.error(error);
+      console.log(error);
       toast.error(error.message);
     }
-  }
+  };
 
-  useEffect(()=>{
-    if(token){
-      navigate('/')
-    }
-  },[token])
   return (
-   <form onSubmit = {onSubmitHandler} className = 'flex flex-col flex-items-center w-[90%] sm:max-w-96 m-auto mt-14 gap-4 text-gray-800'>
-      <div className = 'inline-flex items-center gap-2 mb-2 mt-10'>
-    <p className = 'prata-regular text-3xl'>{currentState}</p>
-    <hr className = 'border-none h-[1.5px] w-8 bg-gray-800' />
+    <div className="min-h-screen flex items-center justify-center w-full">
+      <div className="bg-white shadow-md rounded-lg px-8 py-6 max-w-md w-full">
+        <h1 className="text-2xl font-bold mb-4">Admin Panel</h1>
+
+        <div className="flex mb-5 border rounded-md overflow-hidden text-sm">
+          <button
+            type="button"
+            onClick={() => {
+              setTab("seller");
+              setMode("login");
+              resetFields();
+            }}
+            className={`flex-1 py-2 ${tab === "seller" ? "bg-black text-white" : "bg-gray-100 text-gray-600"}`}
+          >
+            Store Owner
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTab("siteAdmin");
+              resetFields();
+            }}
+            className={`flex-1 py-2 ${tab === "siteAdmin" ? "bg-black text-white" : "bg-gray-100 text-gray-600"}`}
+          >
+            Site Admin
+          </button>
+        </div>
+
+        <form onSubmit={onSubmitHandler}>
+          {tab === "seller" && mode === "register" && (
+            <div className="mb-3 min-w-72">
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Store name
+              </p>
+              <input
+                onChange={(e) => setStoreNameInput(e.target.value)}
+                value={storeName}
+                className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+                type="text"
+                placeholder="e.g. Urban Threads"
+                required
+              />
+            </div>
+          )}
+
+          <div className="mb-3 min-w-72">
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Email address
+            </p>
+            <input
+              onChange={(e) => setEmail(e.target.value)}
+              value={email}
+              className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+              type="email"
+              placeholder="your@email.com"
+              required
+            />
+          </div>
+          <div className="mb-3 min-w-72">
+            <p className="text-sm font-medium text-gray-700 mb-2">Password</p>
+            <input
+              onChange={(e) => setPassword(e.target.value)}
+              value={password}
+              className="rounded-md w-full px-3 py-2 border border-gray-300 outline-none"
+              type="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <button
+            className="mt-2 w-full py-2 px-4 rounded-md text-white bg-black"
+            type="submit"
+          >
+            {tab === "seller"
+              ? mode === "login"
+                ? "Login"
+                : "Create Store Account"
+              : "Login"}
+          </button>
+        </form>
+
+        {tab === "seller" && (
+          <p className="text-sm text-gray-500 mt-4 text-center">
+            {mode === "login" ? "New seller? " : "Already have a store? "}
+            <span
+              onClick={() => {
+                setMode(mode === "login" ? "register" : "login");
+                resetFields();
+              }}
+              className="underline cursor-pointer"
+            >
+              {mode === "login" ? "Create a store account" : "Login instead"}
+            </span>
+          </p>
+        )}
       </div>
+    </div>
+  );
+};
 
-    {currentState === 'Login' ? '' :
-    <input onChange={(e)=>setName(e.target.value)} value={name} type="text" className='w-full px-3 py-2 border border-gray-800' placeholder='Name' required/>}
-    <input onChange={(e)=>setEmail(e.target.value)} value={email} type="email" className='w-full px-3 py-2 border border-gray-800' placeholder='Email' required/>
-    <input onChange={(e)=>setPassword(e.target.value)} value={password} type="password" className='w-full px-3 py-2 border border-gray-800' placeholder='Password' required/>
-    
-<div className = 'w-full flex justify-between text-sm -mt-2'>
-  <p>Forgot your password</p>
-  {
-    currentState === 'Login' ?
-    <p onClick={()=>setCurrentState('Sign Up')} className = 'cursor-pointer'>Create an account</p>
-    :
-    <p onClick={()=>setCurrentState('Login')} className = 'cursor-pointer'>Already have an account</p>
-  }
-</div>
-<button className = 'bg-black text-white font-light px-8 py-2 mt-4'> {currentState === 'Login' ? 'Sign In' : 'Sign Up'} </button>
-   </form>
-  )
-}
-
-export default Login
+export default Login;
