@@ -68,7 +68,13 @@ const App = () => {
                 )}
                 {role === "siteAdmin" && (
                   <>
-                    <Route path="/" element={<Navigate to="/orders" />} />
+                    <Route path="/" element={<Navigate to="/add" />} />
+                    <Route path="/add" element={<Add token={token} />} />
+                    <Route path="/list" element={<List token={token} />} />
+                    <Route
+                      path="/edit/:id"
+                      element={<EditProduct token={token} />}
+                    />
                     <Route path="/orders" element={<Orders token={token} />} />
                     <Route
                       path="/careers"

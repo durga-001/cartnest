@@ -8,8 +8,7 @@ import {
   removeProduct,
   singleProduct,
 } from "../controllers/productController.js";
-import sellerAuth from "../middleware/sellerAuth.js";
-
+import productAuth from "../middleware/productAuth.js";
 const productRouter = express.Router();
 
 const productImages = upload.fields([
