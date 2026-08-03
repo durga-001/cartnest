@@ -22,13 +22,9 @@ const productImages = upload.fields([
 productRouter.get("/list", listProduct);
 productRouter.post("/single", singleProduct);
 
-// store-owner only (each seller manages their own products)
-// NOTE: multer must run before sellerAuth here - for multipart/form-data
-// requests, req.body doesn't exist until multer parses it, so sellerAuth
-// (which writes req.body.sellerId) has to come after it.
-productRouter.post("/add", productImages, sellerAuth, addProduct);
-productRouter.post("/update", productImages, sellerAuth, updateProduct);
-productRouter.post("/remove", sellerAuth, removeProduct);
-productRouter.post("/mylist", sellerAuth, listMyProducts);
+productRouter.post("/add", productImages, productAuth, addProduct);
+productRouter.post("/update", productImages, productAuth, updateProduct);
+productRouter.post("/remove", productAuth, removeProduct);
+productRouter.post("/mylist", productAuth, listMyProducts);
 
 export default productRouter;
