@@ -1,25 +1,19 @@
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { ShopContext } from "../context/ShopContext";
 import Title from "../components/Title";
-import { useState, useEffect } from "react";
 import { assets } from "../assets/assets";
 import CartTotal from "../components/CartTotal";
 
 const Cart = () => {
   const { products, currency, cartItems, updateQuantity, navigate, token } =
     useContext(ShopContext);
-  const [cardData, setCartData] = useState([]);
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-  }, [token]);
+  const [cardData, setCartData] = useState([]);
 
   useEffect(() => {
     if (products.length > 0) {
       const tempData = [];
+
       for (const items in cartItems) {
         for (const item in cartItems[items]) {
           if (cartItems[items][item] > 0) {
@@ -31,9 +25,33 @@ const Cart = () => {
           }
         }
       }
+
       setCartData(tempData);
     }
   }, [cartItems, products]);
+
+  if (!token) {
+    return (
+      <div className="border-t pt-14 flex justify-center">
+        <div className="w-full max-w-md border rounded-lg p-10 text-center shadow-sm">
+          <h2 className="text-xl font-semibold mb-2">
+            Login/Signup to view your cart
+          </h2>
+
+          <p className="text-gray-500 mb-6">
+            Please login or create an account to access your shopping cart.
+          </p>
+
+          <button
+            onClick={() => navigate("/login")}
+            className="bg-black text-white px-6 py-3 rounded"
+          >
+            Login / Signup
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t pt-14">
@@ -47,10 +65,12 @@ const Cart = () => {
             Your cart is empty.
           </div>
         )}
+
         {cardData.map((item, index) => {
           const productData = products.find(
             (product) => product._id === item._id,
           );
+
           if (!productData) return null;
 
           return (
@@ -64,21 +84,25 @@ const Cart = () => {
                   src={productData.image?.[0]}
                   alt=""
                 />
+
                 <div>
                   <p className="text-xs sm:text-lg font-medium">
                     {productData.name}
                   </p>
+
                   <div className="flex items-center gap-5 mt-2">
                     <p>
                       {currency}
                       {productData.price}
                     </p>
+
                     <p className="px-2 sm:px-3 sm:py-1 border bg-slate-50">
                       {item.size}
                     </p>
                   </div>
                 </div>
               </div>
+
               <input
                 onChange={(e) =>
                   e.target.value === "" || e.target.value === "0"
@@ -94,6 +118,7 @@ const Cart = () => {
                 min={1}
                 defaultValue={item.quantity}
               />
+
               <img
                 onClick={() => updateQuantity(item._id, item.size, 0)}
                 className="w-4 mr-4 sm:w-5 cursor-pointer"
