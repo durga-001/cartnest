@@ -35,7 +35,7 @@ const Cart = () => {
       <div className="border-t pt-14 flex justify-center">
         <div className="w-full max-w-md border rounded-lg p-10 text-center shadow-sm">
           <h2 className="text-xl font-semibold mb-2">
-            Login/Signup to view your cart
+            Login to view your cart
           </h2>
 
           <p className="text-gray-500 mb-6">

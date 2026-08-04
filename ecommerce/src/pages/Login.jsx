@@ -56,7 +56,7 @@ const Login = () => {
   }, [token]);
 
   const goToAdminLogin = () => {
-    window.location.href = "https://your-admin-app.onrender.com";
+    window.location.href = "http://localhost:5174/add";
   };
 
   return (
