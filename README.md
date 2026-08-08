@@ -4,7 +4,7 @@ Built with **React.js, Node.js, MongoDB, Express.js, JWT, Razorpay, Gemini API**
 
 ## 🚀 Live Demo
 Check out the deployed project here:  
-👉 [cartnest.com](https://cartnest-zj0x.onrender.com/)
+ [cartnest.com](https://cartnest-zj0x.onrender.com/)
 
 
 ## ✨ Features
