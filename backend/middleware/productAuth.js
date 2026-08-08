@@ -1,9 +1,6 @@
 import jwt from "jsonwebtoken";
 import sellerModel from "../models/sellerModel.js";
 
-// Product management (add/edit/delete/list-mine) is allowed for two kinds
-// of logins: the single site admin (env credentials) and individual
-// sellers. This checks the token against both before rejecting it.
 const productAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
