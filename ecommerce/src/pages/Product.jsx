@@ -1,5 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-toastify";
 import { ShopContext } from "../context/ShopContext.jsx";
 import { assets } from "../assets/assets.js";
 import RelatedProducts from "../components/RelatedProducts.jsx";
@@ -7,10 +9,87 @@ import { isSizeOutOfStock, isProductOutOfStock } from "../utils/stock.js";
 
 const Product = () => {
   const { productId } = useParams();
-  const { products, currency, addToCart } = useContext(ShopContext);
+  const { products, currency, addToCart, token, navigate, backendUrl } =
+    useContext(ShopContext);
   const [productData, setProductData] = useState(false);
   const [image, setImage] = useState("");
   const [size, setSize] = useState("");
+  const [activeTab, setActiveTab] = useState("description");
+
+  const [reviews, setReviews] = useState([]);
+  const [avgRating, setAvgRating] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [myReview, setMyReview] = useState(null);
+  const [formRating, setFormRating] = useState(0);
+  const [formComment, setFormComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchReviews = async () => {
+    try {
+      const { data } = await axios.get(backendUrl + "/api/review/" + productId);
+      if (data.success) {
+        setReviews(data.reviews);
+        setAvgRating(data.average);
+        setReviewCount(data.count);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const fetchMyReview = async () => {
+    if (!token) {
+      setMyReview(null);
+      setFormRating(0);
+      setFormComment("");
+      return;
+    }
+    try {
+      const { data } = await axios.post(
+        backendUrl + "/api/review/mine",
+        { productId },
+        { headers: { token } },
+      );
+      if (data.success && data.review) {
+        setMyReview(data.review);
+        setFormRating(data.review.rating);
+        setFormComment(data.review.comment);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const submitReview = async () => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    if (formRating === 0) {
+      toast.error("Please select a rating");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const { data } = await axios.post(
+        backendUrl + "/api/review/add",
+        { productId, rating: formRating, comment: formComment },
+        { headers: { token } },
+      );
+      if (data.success) {
+        toast.success(myReview ? "Review updated" : "Review submitted");
+        setMyReview(data.review);
+        fetchReviews();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const fetchProductData = async () => {
     const product = products.find((item) => item._id === productId);
@@ -23,6 +102,13 @@ const Product = () => {
   useEffect(() => {
     fetchProductData();
   }, [productId, products]); // FIX: Added 'products' dependency
+
+  useEffect(() => {
+    if (productId) {
+      fetchReviews();
+      fetchMyReview();
+    }
+  }, [productId, token]);
 
   return productData ? (
     <div className="border-t-2 pt-10 transition-opacity ease-in duration-500 opacity-100">
@@ -55,13 +141,23 @@ const Product = () => {
             </p>
           )}
           <div className="flex items-center gap-1 mt-2">
-            {/* FIX: Changed 'w-3 5' to 'w-3.5' */}
-            <img src={assets.star_icon} className="w-3.5" alt="" />
-            <img src={assets.star_icon} className="w-3.5" alt="" />
-            <img src={assets.star_icon} className="w-3.5" alt="" />
-            <img src={assets.star_icon} className="w-3.5" alt="" />
-            <img src={assets.star_dull_icon} className="w-3.5" alt="" />
-            <p className="pl-2">(122)</p>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <img
+                key={star}
+                src={
+                  star <= Math.round(avgRating)
+                    ? assets.star_icon
+                    : assets.star_dull_icon
+                }
+                className="w-3.5"
+                alt=""
+              />
+            ))}
+            <p className="pl-2">
+              {reviewCount > 0
+                ? `${avgRating} (${reviewCount})`
+                : "No reviews yet"}
+            </p>
           </div>
           <p className="mt-5 text-3xl font-medium">
             {currency}
@@ -119,24 +215,128 @@ const Product = () => {
       {/* Description and Reviews */}
       <div className="mt-20">
         <div className="flex">
-          <b className="border px-5 py-3 text-sm">Description</b>
-          <b className="border px-5 py-3 text-sm">Reviews (122)</b>
+          <b
+            onClick={() => setActiveTab("description")}
+            className={`border px-5 py-3 text-sm cursor-pointer ${activeTab === "description" ? "bg-gray-50" : ""}`}
+          >
+            Description
+          </b>
+          <b
+            onClick={() => setActiveTab("reviews")}
+            className={`border px-5 py-3 text-sm cursor-pointer ${activeTab === "reviews" ? "bg-gray-50" : ""}`}
+          >
+            Reviews ({reviewCount})
+          </b>
         </div>
-        <div className="flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500">
-          <p>
-            An e-commerce website is a digital storefront for buying and selling
-            products or services online, featuring elements like product
-            galleries, shopping carts, and secure payment processing. It allows
-            businesses to operate beyond a physical location by providing
-            customers with an online shopping experience that includes product
-            search, detailed descriptions, and a secure checkout.{" "}
-          </p>
-          <p>
-            It allows businesses to operate beyond a physical location by
-            providing customers with an online shopping experience that includes
-            product search, detailed descriptions, and a secure checkout.{" "}
-          </p>
-        </div>
+
+        {activeTab === "description" ? (
+          <div className="flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500">
+            <p>
+              An e-commerce website is a digital storefront for buying and
+              selling products or services online, featuring elements like
+              product galleries, shopping carts, and secure payment processing.
+              It allows businesses to operate beyond a physical location by
+              providing customers with an online shopping experience that
+              includes product search, detailed descriptions, and a secure
+              checkout.{" "}
+            </p>
+            <p>
+              It allows businesses to operate beyond a physical location by
+              providing customers with an online shopping experience that
+              includes product search, detailed descriptions, and a secure
+              checkout.{" "}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6 border px-6 py-6 text-sm text-gray-500">
+            {/* Submit / update review form */}
+            <div className="flex flex-col gap-2 pb-6 border-b">
+              <p className="text-gray-700 font-medium">
+                {myReview ? "Update your review" : "Write a review"}
+              </p>
+              {!token ? (
+                <p>
+                  <span
+                    onClick={() => navigate("/login")}
+                    className="text-black underline cursor-pointer"
+                  >
+                    Login
+                  </span>{" "}
+                  to write a review.
+                </p>
+              ) : (
+                <>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <img
+                        key={star}
+                        onClick={() => setFormRating(star)}
+                        src={
+                          star <= formRating
+                            ? assets.star_icon
+                            : assets.star_dull_icon
+                        }
+                        className="w-5 cursor-pointer"
+                        alt=""
+                      />
+                    ))}
+                  </div>
+                  <textarea
+                    value={formComment}
+                    onChange={(e) => setFormComment(e.target.value)}
+                    placeholder="Share your thoughts about this product (optional)"
+                    className="border px-3 py-2 w-full sm:w-3/4 mt-1"
+                    rows={3}
+                  />
+                  <button
+                    onClick={submitReview}
+                    disabled={submittingReview}
+                    className="mt-2 bg-black text-white px-6 py-2 text-sm w-fit disabled:opacity-50"
+                  >
+                    {submittingReview
+                      ? "Saving..."
+                      : myReview
+                        ? "Update Review"
+                        : "Submit Review"}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Review list */}
+            {reviews.length === 0 ? (
+              <p>No reviews yet — be the first to review this product.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {reviews.map((r) => (
+                  <div key={r._id} className="border-b pb-4">
+                    <div className="flex items-center gap-2">
+                      <p className="text-gray-700 font-medium">{r.userName}</p>
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <img
+                            key={star}
+                            src={
+                              star <= r.rating
+                                ? assets.star_icon
+                                : assets.star_dull_icon
+                            }
+                            className="w-3"
+                            alt=""
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {r.comment && <p className="mt-1">{r.comment}</p>}
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(r.date).toDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <RelatedProducts
         productId={productData._id}
