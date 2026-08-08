@@ -196,6 +196,8 @@ const Collection = () => {
                 price={item.price}
                 image={item.image}
                 storeName={item.storeName}
+                sizes={item.sizes}
+                stock={item.stock}
               />
             );
           })}

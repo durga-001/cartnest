@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext.jsx";
 import { assets } from "../assets/assets.js";
 import RelatedProducts from "../components/RelatedProducts.jsx";
+import { isSizeOutOfStock, isProductOutOfStock } from "../utils/stock.js";
 
 const Product = () => {
   const { productId } = useParams();
@@ -73,24 +74,38 @@ const Product = () => {
             <div className="flex flex-col gap-2">
               <p>Select Size</p>
               <div className="flex gap-2">
-                {/* FIX: Added parenthesis () for implicit return and some styling */}
-                {productData.sizes.map((item, index) => (
-                  <button
-                    onClick={() => setSize(item)}
-                    className={`border py-2 px-4 bg-gray-100 ${item === size ? "border-orange-500" : ""}`}
-                    key={index}
-                  >
-                    {item}
-                  </button>
-                ))}
+                {productData.sizes.map((item, index) => {
+                  const disabled = isSizeOutOfStock(productData.stock, item);
+                  return (
+                    <button
+                      key={index}
+                      disabled={disabled}
+                      onClick={() => !disabled && setSize(item)}
+                      className={`border py-2 px-4 ${
+                        disabled
+                          ? "bg-gray-50 text-gray-300 line-through cursor-not-allowed"
+                          : "bg-gray-100"
+                      } ${item === size ? "border-orange-500" : ""}`}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <button
-              onClick={() => addToCart(productData._id, size)}
-              className="bg-black text-white px-8 py-3 text-sm active:bg-gray-700"
-            >
-              Add To Cart
-            </button>
+            {isProductOutOfStock(productData.sizes, productData.stock) ? (
+              <p className="text-red-500 font-medium">
+                This product is currently out of stock.
+              </p>
+            ) : (
+              <button
+                onClick={() => addToCart(productData._id, size)}
+                disabled={!size || isSizeOutOfStock(productData.stock, size)}
+                className="bg-black text-white px-8 py-3 text-sm active:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                ADD TO CART
+              </button>
+            )}
             <hr className="mt-8 sm:w-4/5" />
             <div className="text-sm text-gray-500 mt-5 flex flex-col gap-1">
               <p>100% Original product</p>

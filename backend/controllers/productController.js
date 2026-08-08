@@ -244,7 +244,7 @@ const getRecommendations = async (req, res) => {
 
     const candidates = await productModel
       .find({ _id: { $ne: productId } })
-      .select("_id name image price category subCategory")
+      .select("_id name image price category subCategory sizes stock")
       .limit(60);
 
     const fallback = () =>
