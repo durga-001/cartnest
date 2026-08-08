@@ -2,6 +2,7 @@
 
 import { v2 as cloudinary } from "cloudinary";
 import productModel from "../models/productModel.js";
+import ai from "../config/gemini.js";
 
 // --- ADD PRODUCT ---
 const addProduct = async (req, res) => {
@@ -47,6 +48,7 @@ const addProduct = async (req, res) => {
       subCategory,
       bestseller: bestseller === "true" ? true : false,
       sizes: JSON.parse(sizes),
+      stock: req.body.stock ? JSON.parse(req.body.stock) : {},
       image: imagesUrl,
       date: Date.now(),
       sellerId,
@@ -142,6 +144,9 @@ const updateProduct = async (req, res) => {
     product.subCategory = subCategory;
     product.bestseller = bestseller === "true" ? true : false;
     product.sizes = JSON.parse(sizes);
+    if (req.body.stock) {
+      product.stock = JSON.parse(req.body.stock);
+    }
     product.image = uploadedUrls.filter((url) => url);
 
     await product.save();
@@ -187,6 +192,142 @@ const singleProduct = async (req, res) => {
   }
 };
 
+// --- AI: GENERATE PRODUCT DESCRIPTION (Gemini) ---
+// Used by the admin "Generate with AI" button on the Add/Edit product form.
+const generateDescription = async (req, res) => {
+  try {
+    const { name, category, subCategory } = req.body;
+    if (!name) {
+      return res.json({ success: false, message: "Product name is required" });
+    }
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({
+        success: false,
+        message: "GEMINI_API_KEY is not configured on the server",
+      });
+    }
+
+    const prompt = `Write a concise, appealing e-commerce product description (2-3 sentences, plain text, no markdown or headings) for a product named "${name}"${
+      category ? `, category: ${category}` : ""
+    }${subCategory ? `, sub-category: ${subCategory}` : ""}. Mention likely material/use and why a shopper would want it.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const description = response.text?.trim();
+    if (!description) {
+      return res.json({
+        success: false,
+        message: "Gemini returned an empty response",
+      });
+    }
+
+    return res.json({ success: true, description });
+  } catch (error) {
+    console.log(error);
+    return res.json({ success: false, message: error.message });
+  }
+};
+
+// --- AI: PRODUCT RECOMMENDATIONS (Gemini) ---
+// Falls back to same category+subCategory matching if Gemini isn't configured or fails,
+// so the storefront never breaks even without an API key set.
+const getRecommendations = async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const baseProduct = await productModel.findById(productId);
+    if (!baseProduct) {
+      return res.json({ success: false, message: "Product not found" });
+    }
+
+    const candidates = await productModel
+      .find({ _id: { $ne: productId } })
+      .select("_id name image price category subCategory")
+      .limit(60);
+
+    const fallback = () =>
+      candidates
+        .filter(
+          (p) =>
+            p.category === baseProduct.category &&
+            p.subCategory === baseProduct.subCategory,
+        )
+        .slice(0, 5);
+
+    if (!process.env.GEMINI_API_KEY || candidates.length === 0) {
+      return res.json({
+        success: true,
+        products: fallback(),
+        source: "fallback",
+      });
+    }
+
+    const catalog = candidates.map((p) => ({
+      id: p._id.toString(),
+      name: p.name,
+      category: p.category,
+      subCategory: p.subCategory,
+      price: p.price,
+    }));
+
+    const prompt = `You are a product recommendation engine for an e-commerce store.
+Target product: ${JSON.stringify({
+      name: baseProduct.name,
+      category: baseProduct.category,
+      subCategory: baseProduct.subCategory,
+      price: baseProduct.price,
+    })}
+Candidate products: ${JSON.stringify(catalog)}
+Pick up to 5 candidate ids a shopper viewing the target product would most likely also want (similar style, complementary, or same category).
+Respond with ONLY a JSON array of id strings, nothing else, e.g. ["id1","id2"].`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    let ids = [];
+    try {
+      const raw = response.text
+        .trim()
+        .replace(/^```json|```$/g, "")
+        .trim();
+      ids = JSON.parse(raw);
+    } catch (parseError) {
+      console.log(
+        "Gemini recommendation parse failed, using fallback:",
+        parseError.message,
+      );
+      return res.json({
+        success: true,
+        products: fallback(),
+        source: "fallback",
+      });
+    }
+
+    const byId = new Map(candidates.map((p) => [p._id.toString(), p]));
+    const recommended = ids
+      .map((id) => byId.get(id))
+      .filter(Boolean)
+      .slice(0, 5);
+
+    if (recommended.length === 0) {
+      return res.json({
+        success: true,
+        products: fallback(),
+        source: "fallback",
+      });
+    }
+
+    return res.json({ success: true, products: recommended, source: "gemini" });
+  } catch (error) {
+    console.log(error);
+    return res.json({ success: false, message: error.message });
+  }
+};
+
 export {
   addProduct,
   listProduct,
@@ -194,4 +335,6 @@ export {
   updateProduct,
   removeProduct,
   singleProduct,
+  generateDescription,
+  getRecommendations,
 };
