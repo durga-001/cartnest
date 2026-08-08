@@ -17,6 +17,46 @@ const Add = ({ token }) => {
   const [subCategory, setSubCategory] = useState("Topwear");
   const [bestseller, setBestseller] = useState(false);
   const [sizes, setSizes] = useState([]);
+  const [stock, setStock] = useState({});
+  const [generatingDescription, setGeneratingDescription] = useState(false);
+
+  const toggleSize = (size) => {
+    setSizes((prev) =>
+      prev.includes(size)
+        ? prev.filter((item) => item !== size)
+        : [...prev, size],
+    );
+    setStock((prev) => {
+      const next = { ...prev };
+      if (next[size] === undefined) next[size] = 0;
+      return next;
+    });
+  };
+
+  const generateWithAI = async () => {
+    if (!name) {
+      toast.error("Enter a product name first");
+      return;
+    }
+    setGeneratingDescription(true);
+    try {
+      const response = await axios.post(
+        backendUrl + "/api/product/generate-description",
+        { name, category, subCategory },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (response.data.success) {
+        setDescription(response.data.description);
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
@@ -31,6 +71,7 @@ const Add = ({ token }) => {
       formData.append("subCategory", subCategory);
       formData.append("bestseller", bestseller);
       formData.append("sizes", JSON.stringify(sizes));
+      formData.append("stock", JSON.stringify(stock));
 
       image1 && formData.append("image1", image1);
       image2 && formData.append("image2", image2);
@@ -54,6 +95,7 @@ const Add = ({ token }) => {
         setCategory("Men");
         setSubCategory("Topwear");
         setSizes([]);
+        setStock({});
         setBestseller(false);
       } else {
         toast.error(response.data.message);
@@ -138,7 +180,17 @@ const Add = ({ token }) => {
       </div>
 
       <div className="w-full">
-        <p className="mb-2">Product Description</p>
+        <div className="flex items-center justify-between max-w-[500px] mb-2">
+          <p>Product Description</p>
+          <button
+            type="button"
+            onClick={generateWithAI}
+            disabled={generatingDescription}
+            className="text-xs px-3 py-1 border rounded bg-black text-white disabled:opacity-50"
+          >
+            {generatingDescription ? "Generating..." : "Generate with AI"}
+          </button>
+        </div>
         <textarea
           onChange={(e) => setDescription(e.target.value)}
           value={description}
@@ -196,82 +248,41 @@ const Add = ({ token }) => {
       <div>
         <p className="mb-2">Product Size</p>
         <div className="flex gap-3">
-          <div
-            onClick={() =>
-              setSizes((prev) =>
-                prev.includes("S")
-                  ? prev.filter((item) => item !== "S")
-                  : [...prev, "S"],
-              )
-            }
-          >
-            <p
-              className={`${sizes.includes("S") ? "bg-pink-100" : "bg-slate-200"} px-3 py-1 cursor-pointer`}
-            >
-              S
-            </p>
-          </div>
-          <div
-            onClick={() =>
-              setSizes((prev) =>
-                prev.includes("M")
-                  ? prev.filter((item) => item !== "M")
-                  : [...prev, "M"],
-              )
-            }
-          >
-            <p
-              className={`${sizes.includes("M") ? "bg-pink-100" : "bg-slate-200"} px-3 py-1 cursor-pointer`}
-            >
-              M
-            </p>
-          </div>
-          <div
-            onClick={() =>
-              setSizes((prev) =>
-                prev.includes("L")
-                  ? prev.filter((item) => item !== "L")
-                  : [...prev, "L"],
-              )
-            }
-          >
-            <p
-              className={`${sizes.includes("L") ? "bg-pink-100" : "bg-slate-200"} px-3 py-1 cursor-pointer`}
-            >
-              L
-            </p>
-          </div>
-          <div
-            onClick={() =>
-              setSizes((prev) =>
-                prev.includes("XL")
-                  ? prev.filter((item) => item !== "XL")
-                  : [...prev, "XL"],
-              )
-            }
-          >
-            <p
-              className={`${sizes.includes("XL") ? "bg-pink-100" : "bg-slate-200"} px-3 py-1 cursor-pointer`}
-            >
-              XL
-            </p>
-          </div>
-          <div
-            onClick={() =>
-              setSizes((prev) =>
-                prev.includes("XXL")
-                  ? prev.filter((item) => item !== "XXL")
-                  : [...prev, "XXL"],
-              )
-            }
-          >
-            <p
-              className={`${sizes.includes("XXL") ? "bg-pink-100" : " bg-slate-200"} px-3 py-1 cursor-pointer`}
-            >
-              XXL
-            </p>
-          </div>
+          {["S", "M", "L", "XL", "XXL"].map((size) => (
+            <div key={size} onClick={() => toggleSize(size)}>
+              <p
+                className={`${sizes.includes(size) ? "bg-pink-100" : "bg-slate-200"} px-3 py-1 cursor-pointer`}
+              >
+                {size}
+              </p>
+            </div>
+          ))}
         </div>
+
+        {sizes.length > 0 && (
+          <div className="mt-3">
+            <p className="mb-2">Stock per size</p>
+            <div className="flex flex-wrap gap-3">
+              {sizes.map((size) => (
+                <div key={size} className="flex items-center gap-2">
+                  <span className="text-sm w-8">{size}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stock[size] ?? 0}
+                    onChange={(e) =>
+                      setStock((prev) => ({
+                        ...prev,
+                        [size]: Number(e.target.value),
+                      }))
+                    }
+                    className="w-20 px-2 py-1 border"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 mt-2">

@@ -7,6 +7,8 @@ import {
   updateProduct,
   removeProduct,
   singleProduct,
+  generateDescription,
+  getRecommendations,
 } from "../controllers/productController.js";
 import productAuth from "../middleware/productAuth.js";
 const productRouter = express.Router();
@@ -21,10 +23,12 @@ const productImages = upload.fields([
 // public
 productRouter.get("/list", listProduct);
 productRouter.post("/single", singleProduct);
+productRouter.post("/recommendations", getRecommendations);
 
 productRouter.post("/add", productImages, productAuth, addProduct);
 productRouter.post("/update", productImages, productAuth, updateProduct);
 productRouter.post("/remove", productAuth, removeProduct);
 productRouter.post("/mylist", productAuth, listMyProducts);
+productRouter.post("/generate-description", productAuth, generateDescription);
 
 export default productRouter;
