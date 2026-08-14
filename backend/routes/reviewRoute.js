@@ -1,5 +1,6 @@
 import express from "express";
 import authUser from "../middleware/auth.js";
+import upload from "../middleware/multer.js";
 import {
   addOrUpdateReview,
   getProductReviews,
@@ -12,8 +13,12 @@ const reviewRouter = express.Router();
 // public
 reviewRouter.get("/:productId", getProductReviews);
 
-// requires login
-reviewRouter.post("/add", authUser, addOrUpdateReview);
+reviewRouter.post(
+  "/add",
+  upload.array("images", 4),
+  authUser,
+  addOrUpdateReview,
+);
 reviewRouter.post("/mine", authUser, getMyReview);
 reviewRouter.post("/remove", authUser, deleteReview);
 

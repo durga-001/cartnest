@@ -22,7 +22,13 @@ const Product = () => {
   const [myReview, setMyReview] = useState(null);
   const [formRating, setFormRating] = useState(0);
   const [formComment, setFormComment] = useState("");
+  const [reviewImages, setReviewImages] = useState([]);
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  const handleReviewImageChange = (e) => {
+    const files = Array.from(e.target.files).slice(0, 4);
+    setReviewImages(files);
+  };
 
   const fetchReviews = async () => {
     try {
@@ -71,14 +77,21 @@ const Product = () => {
     }
     setSubmittingReview(true);
     try {
+      const formData = new FormData();
+      formData.append("productId", productId);
+      formData.append("rating", formRating);
+      formData.append("comment", formComment);
+      reviewImages.forEach((file) => formData.append("images", file));
+
       const { data } = await axios.post(
         backendUrl + "/api/review/add",
-        { productId, rating: formRating, comment: formComment },
+        formData,
         { headers: { token } },
       );
       if (data.success) {
         toast.success(myReview ? "Review updated" : "Review submitted");
         setMyReview(data.review);
+        setReviewImages([]);
         fetchReviews();
       } else {
         toast.error(data.message);
@@ -288,6 +301,46 @@ const Product = () => {
                     className="border px-3 py-2 w-full sm:w-3/4 mt-1"
                     rows={3}
                   />
+
+                  <div className="mt-2">
+                    <label className="text-sm text-gray-700 block mb-1">
+                      Add photos (up to 4)
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleReviewImageChange}
+                      className="text-sm"
+                    />
+                    {reviewImages.length > 0 ? (
+                      <div className="flex gap-2 mt-2">
+                        {reviewImages.map((file, i) => (
+                          <img
+                            key={i}
+                            src={URL.createObjectURL(file)}
+                            className="w-16 h-16 object-cover border rounded"
+                            alt=""
+                          />
+                        ))}
+                      </div>
+                    ) : myReview?.images?.length > 0 ? (
+                      <div className="flex gap-2 mt-2">
+                        {myReview.images.map((img, i) => (
+                          <img
+                            key={i}
+                            src={img}
+                            className="w-16 h-16 object-cover border rounded"
+                            alt=""
+                          />
+                        ))}
+                        <p className="text-xs text-gray-400 self-center">
+                          Choosing new photos will replace these.
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+
                   <button
                     onClick={submitReview}
                     disabled={submittingReview}
@@ -328,6 +381,19 @@ const Product = () => {
                       </div>
                     </div>
                     {r.comment && <p className="mt-1">{r.comment}</p>}
+                    {r.images && r.images.length > 0 && (
+                      <div className="flex gap-2 mt-2">
+                        {r.images.map((img, i) => (
+                          <img
+                            key={i}
+                            src={img}
+                            className="w-16 h-16 object-cover border rounded cursor-pointer"
+                            onClick={() => window.open(img, "_blank")}
+                            alt=""
+                          />
+                        ))}
+                      </div>
+                    )}
                     <p className="text-xs text-gray-400 mt-1">
                       {new Date(r.date).toDateString()}
                     </p>
