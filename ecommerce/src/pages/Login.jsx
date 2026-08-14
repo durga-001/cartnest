@@ -114,6 +114,14 @@ const Login = () => {
             Login Here
           </p>
         )}
+        {currentState === "Login" && (
+          <p
+            onClick={() => navigate("/forgot-password")}
+            className="cursor-pointer"
+          >
+            Forgot your password?
+          </p>
+        )}
       </div>
 
       <button

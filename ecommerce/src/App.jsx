@@ -18,6 +18,7 @@ import Verify from "./pages/Verify.jsx";
 import Careers from "./pages/Careers.jsx";
 import JobApply from "./pages/JobApply.jsx";
 import MyProfile from "./pages/MyProfile.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
 const App = () => {
   return (
     <div className="px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]">
@@ -38,6 +39,7 @@ const App = () => {
         <Route path="/careers" element={<Careers />} />
         <Route path="/careers/apply/:jobId" element={<JobApply />} />
         <Route path="/profile" element={<MyProfile />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
       <Footer />
     </div>
