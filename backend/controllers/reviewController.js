@@ -1,9 +1,7 @@
+import { v2 as cloudinary } from "cloudinary";
 import reviewModel from "../models/reviewModel.js";
 import userModel from "../models/userModel.js";
 
-// Add a review, or update it if this user already reviewed this product.
-// findOneAndUpdate with upsert:true means "submit" and "update" are the same
-// operation — the unique (productId, userId) index guarantees no duplicates.
 const addOrUpdateReview = async (req, res) => {
   try {
     const { userId, productId, rating, comment } = req.body;
@@ -26,6 +24,22 @@ const addOrUpdateReview = async (req, res) => {
       return res.json({ success: false, message: "User not found" });
     }
 
+    // Keep previously uploaded photos unless the user attaches new ones this time.
+    let images;
+    if (req.files && req.files.length > 0) {
+      images = await Promise.all(
+        req.files.map(async (file) => {
+          const result = await cloudinary.uploader.upload(file.path, {
+            resource_type: "image",
+          });
+          return result.secure_url;
+        }),
+      );
+    } else {
+      const existing = await reviewModel.findOne({ productId, userId });
+      images = existing ? existing.images : [];
+    }
+
     const review = await reviewModel.findOneAndUpdate(
       { productId, userId },
       {
@@ -34,6 +48,7 @@ const addOrUpdateReview = async (req, res) => {
         userName: user.name,
         rating,
         comment: comment || "",
+        images,
         date: Date.now(),
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
@@ -67,8 +82,6 @@ const getProductReviews = async (req, res) => {
   }
 };
 
-// Lets the product page know if the logged-in user already reviewed this product,
-// so the form can be pre-filled and act as "update" instead of "submit new".
 const getMyReview = async (req, res) => {
   try {
     const { userId, productId } = req.body;
