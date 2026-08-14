@@ -98,7 +98,7 @@ const Login = () => {
         required
       />
 
-      <div className="w-full flex justify-between text-sm mt-[-8px]">
+      <div className="w-full flex justify-between text-sm mt-2">
         {currentState === "Login" ? (
           <p
             onClick={() => setCurrentState("Sign Up")}
