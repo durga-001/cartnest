@@ -1,8 +1,6 @@
-// backend/controllers/productController.js
-
 import { v2 as cloudinary } from "cloudinary";
 import productModel from "../models/productModel.js";
-import ai from "../config/gemini.js";
+import ai, { GEMINI_MODEL } from "../config/gemini.js";
 
 // --- ADD PRODUCT ---
 const addProduct = async (req, res) => {
@@ -212,7 +210,7 @@ const generateDescription = async (req, res) => {
     }${subCategory ? `, sub-category: ${subCategory}` : ""}. Mention likely material/use and why a shopper would want it.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
     });
 
@@ -227,7 +225,10 @@ const generateDescription = async (req, res) => {
     return res.json({ success: true, description });
   } catch (error) {
     console.log(error);
-    return res.json({ success: false, message: error.message });
+    const message = error.message?.includes("NOT_FOUND")
+      ? `Gemini model "${GEMINI_MODEL}" is unavailable. Set GEMINI_MODEL in .env to a currently supported model (check https://ai.google.dev/gemini-api/docs/models).`
+      : error.message;
+    return res.json({ success: false, message });
   }
 };
 
@@ -284,7 +285,7 @@ Pick up to 5 candidate ids a shopper viewing the target product would most likel
 Respond with ONLY a JSON array of id strings, nothing else, e.g. ["id1","id2"].`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
     });
 
