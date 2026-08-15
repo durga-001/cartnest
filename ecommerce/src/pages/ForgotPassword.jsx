@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { ShopContext } from "../context/ShopContext";
@@ -9,9 +9,23 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  // Countdown ticker for the resend cooldown
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setResendTimer((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const sendOtp = async (e) => {
     e.preventDefault();
+    if (sendingOtp || resendTimer > 0) return;
+
+    setSendingOtp(true);
     try {
       const res = await axios.post(backendUrl + "/api/user/send-reset-otp", {
         email,
@@ -19,11 +33,14 @@ const ForgotPassword = () => {
       if (res.data.success) {
         toast.success(res.data.message);
         setStep(2);
+        setResendTimer(30); // block resend for 30s so the click is clearly confirmed
       } else {
         toast.error(res.data.message);
       }
     } catch (error) {
       toast.error(error.message);
+    } finally {
+      setSendingOtp(false);
     }
   };
 
@@ -87,10 +104,17 @@ const ForgotPassword = () => {
       )}
 
       <button
-        className="bg-black text-white font-light px-8 py-2 mt-4 w-full"
+        className="bg-black text-white font-light px-8 py-2 mt-4 w-full disabled:opacity-50 disabled:cursor-not-allowed"
         type="submit"
+        disabled={step === 1 && (sendingOtp || resendTimer > 0)}
       >
-        {step === 1 ? "Send OTP" : "Reset Password"}
+        {step === 1
+          ? sendingOtp
+            ? "Sending..."
+            : resendTimer > 0
+              ? `Resend OTP in ${resendTimer}s`
+              : "Send OTP"
+          : "Reset Password"}
       </button>
     </form>
   );
